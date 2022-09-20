@@ -17,7 +17,12 @@
                 </thead>
 
                 <tbody>
-                    <tr v-for="contact in contacts" v-bind:key="contact._id">
+                    <tr v-if="contacts == ''">
+                        <td colspan="3">
+                            <span>Sorry, no data available!</span>
+                        </td>
+                    </tr>
+                    <tr v-else v-for="contact in contacts" v-bind:key="contact._id">
                         <td>
                             <span v-text="contact.name"></span><span v-if="(contact.unreadMessages > 0)" v-text="' (' + contact.unreadMessages + ')'" class="text-danger"></span>
                         </td>

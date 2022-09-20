@@ -57,12 +57,10 @@
                     localStorage.setItem(this.$accessTokenKey, accessToken)
 
                     // to go to home page without refreshing
-                    swal.fire("Success", response.data.message, "Success");
+                    swal.fire("Success", response.data.message, "Success").then(function() {
+                        window.location = "/home";
+                    });
                     //this.$router.push("/");
-
-                    setTimeout(function () {
-                        window.location.href = "/"
-                    }, 500);
 
                     form.reset();
                 } else {

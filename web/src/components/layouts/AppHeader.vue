@@ -19,7 +19,10 @@
                             <span class="visually-hidden">(current)</span>
                         </router-link>
                     </li>
-
+                    <!-- link to show all groups, only to logged-in users -->
+                    <li class="nav-item" v-if="login">
+                        <router-link class="nav-link" to="/groups">Groups</router-link>
+                    </li>
                     <li class="nav-item" v-if="!login">
                         <router-link class="nav-link" to="/login">Login</router-link>
                     </li>
@@ -34,9 +37,15 @@
                             <li><a class="dropdown-item" href="javascript:void(0);" v-on:click="dologout">Logout</a></li>
                         </div>
                     </li>
+                    <li class="nav-item" v-if="login">
+                        <router-link class="nav-link" to="/notifications">
+                            <i class="fa fa-bell"></i>
+                            <span class="badge" v-if="unreadNotifications > 0" v-text="unreadNotifications"></span>
+                        </router-link>
+                    </li>
                 </ul>
 
-                <form class="d-flex">
+                <form class="d-flex" v-on:submit.prevent="doSearch">
                     <input class="form-control me-sm-2" type="text" v-model="query" placeholder="Search">
                     <button class="btn btn-secondary my-2 my-sm-0" type="submit">Search</button>
                 </form>
@@ -53,7 +62,9 @@
         data() {
             return {
                 login: false,
-                user: null
+                user: null,
+                // get value from search input field
+                query: ""
             }
         },
 
@@ -71,6 +82,32 @@
                     swal.fire("Error", response.data.message, "error");
                 }
             },
+            doSearch: async function () {
+                // create form data object and add searched query in it
+                const formData = new FormData()
+                formData.append("query", this.query)
+
+                // call an AJAX to the server
+                const response = await axios.post(
+                    this.$apiURL + "/search",
+
+                    // send the form data object with the request
+                    formData,
+
+                    // pass headers that contains access token
+                    // so the server will know which user's contact to search
+                    {
+                        headers: this.$headers
+                    }
+                )
+
+                if (response.data.status == "success") {
+                    // set the contacts array to the one received from API
+                    store.commit("setContacts", response.data.contacts)
+                } else {
+                    swal.fire("Error", response.data.message, "error")
+                }
+            },
             getUser: async function () {
                 const self = this
 
@@ -84,6 +121,7 @@
                         // user is logged in
                         this.$user = response.data.user
                         socketIO.emit("connected", this.$user.email);
+                        store.commit("setUnreadNotifications", response.data.unreadNotifications);
                         socketIO.on("sendMessage", async function (data) {
                             if (self.$route.path == "/chat/" + data.data.sender.email) {
                                 store.commit("appendMessage", data.data)
@@ -128,6 +166,11 @@
         mounted: function () {
             this.getUser();
             global.socketIO = io(this.$apiURL);
-        }
+        },
+        computed: {
+            unreadNotifications() {
+                return store.getters.getUnreadNotifications
+            }
+        },
     }
 </script>

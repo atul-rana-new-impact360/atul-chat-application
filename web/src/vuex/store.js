@@ -4,7 +4,10 @@ export default createStore({
     state() {
         return {
             messages: [],
-            contacts: []
+            contacts: [],
+            // initialize groups array
+            groups: [],
+            unreadNotifications: 0,
         }
     },
 
@@ -24,6 +27,13 @@ export default createStore({
         setMessages (state, newMessages) {
             state.messages = newMessages
         },
+        // set the groups value
+        setGroups (state, newGroups) {
+            state.groups = newGroups
+        },
+        setUnreadNotifications (state, unreadNotifications) {
+            state.unreadNotifications = unreadNotifications
+        },
     },
 
     getters: {
@@ -32,6 +42,13 @@ export default createStore({
         },
         getContacts (state) {
             return state.contacts
-        }
+        },
+        // get the state groups
+        getGroups (state) {
+            return state.groups
+        },
+        getNotifications (state) {
+            return state.notifications
+        },
     }
 })

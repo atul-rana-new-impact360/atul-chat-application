@@ -39,13 +39,14 @@ const socketIO = require("socket.io")(http, {
         origin: ["http://localhost:8080"]
     }
 });
+const groups = require("./modules/groups");
 
 // array that holds all connected users socket ID
 global.users = [];
 
 // start the server at port 3000 (for local) or for hosting server port
-http.listen(process.env.PORT || 3000, function () {
-    console.log("Server has been started at: " + (process.env.PORT || 3000));
+http.listen(process.env.PORT || 4000, function () {
+    console.log("Server has been started at: " + (process.env.PORT || 4000));
 
     // connect with database
     MongoClient.connect("mongodb://localhost:27017", function (error, client) {
@@ -69,6 +70,7 @@ http.listen(process.env.PORT || 3000, function () {
         chat.socketIO = socketIO;
         contact.init(app, express);
         chat.init(app, express);
+        groups.init(app, express);
         // route for post login requests
         app.post("/login", async function (request, result) {
 
@@ -127,10 +129,23 @@ http.listen(process.env.PORT || 3000, function () {
         app.post("/getUser", auth, async function (request, result) {
             const user = request.user;
 
+            // get number of unread notifications
+            let unreadNotifications = 0;
+            if (user.notifications) {
+                for (let a = 0; a < user.notifications.length; a++) {
+                    if (!user.notifications[a].isRead) {
+                        unreadNotifications++;
+                    }
+                }
+            }
+
             result.json({
                 status: "success",
                 message: "Data has been fetched.",
-                user: user
+                user: user,
+
+                // send to client
+                unreadNotifications: unreadNotifications
             });
         });
 
@@ -198,6 +213,54 @@ http.listen(process.env.PORT || 3000, function () {
                     status: "success",
                     message: "Account has been created. Please login now."
                 });
+            });
+        });
+        // an API to search for contacts
+        app.post("/search", auth, async function (request, result) {
+            // get authenticated user
+            const user = request.user;
+
+            // get searched query
+            const query = request.fields.query;
+
+            // create an empty array
+            const contacts = [];
+
+            // loop through all contacts
+            for (let a = 0; a < user.contacts.length; a++) {
+
+                // check where name or email matches with query
+                if (user.contacts[a].name.includes(query)
+                    || user.contacts[a].email.includes(query)) {
+
+                    // add in contacts array
+                    contacts.push(user.contacts[a]);
+                }
+            }
+
+            // return the new contacts array
+            result.json({
+                status: "success",
+                message: "Data has been fetched.",
+                contacts: contacts
+            });
+        });
+        app.post("/markNotificationsAsRead", auth, async function (request, result) {
+            // get authenticated user
+            const user = request.user;
+
+            // mark isRead to true in each element of notifications array
+            await db.collection("users").findOneAndUpdate({
+                _id: user._id
+            }, {
+                $set: {
+                    "notifications.$[].isRead": true
+                }
+            });
+
+            result.json({
+                status: "success",
+                message: "Notification has been marked as read."
             });
         });
 
